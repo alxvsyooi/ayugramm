@@ -225,11 +225,46 @@ jobs:
           echo "path=$RUNNER_TEMP/output/AyuGram-Full-StockThemes.ipa" >> "$GITHUB_OUTPUT"
           ls -lh "$RUNNER_TEMP/output/AyuGram-Full-StockThemes.ipa"
 
+      - name: Inspect IPA and build lite variant
+        id: lite
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK="$RUNNER_TEMP/ipa-lite"
+          rm -rf "$WORK" && mkdir -p "$WORK"
+          cd "$WORK"
+          unzip -q "${{ steps.ipa.outputs.path }}"
+          APP="$(find Payload -maxdepth 1 -name '*.app' | head -1)"
+          test -n "$APP" || { echo 'No .app in Payload'; exit 1; }
+          echo "=== App bundle: $APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' -c 'Print :CFBundleShortVersionString' -c 'Print :MinimumOSVersion' "$APP/Info.plist" || true
+          lipo -info "$APP/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")" || true
+          codesign -dvv "$APP" 2>&1 | grep -E 'Identifier|Authority|TeamIdentifier' || true
+          echo "=== Top-level content"
+          ls -la "$APP" | head -80 || true
+          echo "=== Nested bundles"
+          find "$APP" -mindepth 1 \( -name "*.appex" -o -name "*.app" \) | sed "s#^$APP/##" || true
+          # Lite: drop app extensions, Watch app and App Clips so free Apple IDs
+          # stay within the App ID limit and re-signers only touch the main app.
+          rm -rf "$APP/PlugIns" "$APP/Extensions" "$APP/Watch" "$APP/AppClips"
+          OUT="$RUNNER_TEMP/output/AyuGram-Lite-NoExtensions.ipa"
+          zip -qry "$OUT" Payload
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+          ls -lh "$OUT"
+
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Full-StockThemes-IPA
           path: ${{ steps.ipa.outputs.path }}
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Upload lite IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: AyuGram-Lite-NoExtensions-IPA
+          path: ${{ steps.lite.outputs.path }}
           compression-level: 0
           if-no-files-found: error
 
