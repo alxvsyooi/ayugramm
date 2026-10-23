@@ -1,0 +1,244 @@
+name: AyuGram IPA
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ayu-ipa-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify full Ayu with stock Telegram themes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile apply_ayu_*.py
+          REF="$(tr -d '[:space:]' < telegram-ref.txt)"
+          ROOT="$RUNNER_TEMP/Telegram-iOS"
+          git init "$ROOT"
+          cd "$ROOT"
+          git remote add origin https://github.com/TelegramMessenger/Telegram-iOS.git
+          git fetch --depth 1 origin "$REF"
+          git checkout --detach FETCH_HEAD
+          python3 "$GITHUB_WORKSPACE/apply_ayu_full_stock_pipeline.py" "$ROOT"
+
+          grep -q 'AYU_DELETED_MESSAGE_ALPHA_v1' submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift
+          test "$(grep -c '? 0.5 : 1.0' submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageItemImpl.swift)" = 2
+          grep -q 'AYU_DELETED_VIEWER_SAFETY_v1' submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift
+          grep -q '!AyuRuntimeSettings.isDeleted(item.message.id)' submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift
+          grep -q 'current.globalIds.remove(id.id)' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'subtracting(resolvedIds)' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'AYU_DELETED_DARK_BUBBLE_v2' submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift
+          grep -q 'AYU_DELETED_TIMESTAMP_MARKER_v1' submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/ChatMessageDateAndStatusNode.swift
+          grep -q 'AYU_CHAT_CAMERA_GHOST_v1' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'recordVideoMessageCameraIsFront(position == .front)' submodules/TelegramUI/Components/VideoMessageCameraScreen/Sources/VideoMessageCameraScreen.swift
+          grep -q 'AYU_CAMERA_CAPTURE_ROUTE_v2' submodules/Camera/Sources/Camera.swift
+          grep -q 'markPositionChange(position: configuration.position)' submodules/Camera/Sources/Camera.swift
+          grep -q 'ItemListExpandableSwitchItem(' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'private func ayuSpySettingsController' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'Запоминать последнюю камеру' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'text: "exteraGram"' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
+          grep -q 'ayuExteraSettingsController(context: context)' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoSettingsItems.swift
+          grep -q 'AYU_AVATAR_ROUNDING_v1' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'guard defaults.object(forKey: avatarCornerPercentKey) != nil else { return 100 }' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -Fq 'let entries: [AyuExteraEntry] = [.header, .essentials, .appearance, .chats]' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'title: "Единое закругление"' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'final class AyuAvatarRoundingItem' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuAvatarRoundingItem.swift
+          grep -q 'public func ayuAvatarCornerRadius' submodules/AvatarNode/Sources/AvatarNode.swift
+          ! grep -q 'private let roundCorners' submodules/AvatarNode/Sources/PeerAvatar.swift
+          grep -q 'AYU_CHAT_AVATAR_ROUNDING_v2' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'guard defaults.object(forKey: chatAvatarCornerPercentKey) != nil else { return 100 }' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'case chatRounding(Int32)' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'AYU_AVATAR_ROUNDING_SCOPES_v3' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'guard defaults.object(forKey: profileAvatarCornerPercentKey) != nil else { return 100 }' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'preview: .chatList' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'preview: .chatMessage' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'preview: .profile' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'ayuRefreshVisibleAvatarRounding()' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q '.ayuSetRoundingScope(.chatList(isForum: isForumAvatar)' submodules/ChatListUI/Sources/Node/ChatListItem.swift
+          grep -q 'AYU_CHAT_AVATAR_ROUNDING_v2' submodules/TelegramUI/Components/Chat/ChatMessageItemImpl/Sources/ChatMessageDateHeader.swift
+          grep -q 'AyuGramAppIcon.png' Telegram/Telegram-iOS/DefaultAppIcon.xcassets/AppIconLLC.appiconset/Contents.json
+          test -f Telegram/Telegram-iOS/DefaultAppIcon.xcassets/AppIconLLC.appiconset/AyuGramAppIcon.png
+          grep -Fq '"solid": "srgb:0.16863,0.13333,0.25882,1.00000"' Telegram/Telegram-iOS/Telegram.icon/icon.json
+          grep -Fq 'self.cell.xAcceleration = 0.0' submodules/TelegramUI/Components/ChatListHeaderComponent/Sources/ChatListNavigationBar.swift
+          grep -Fq 'self.cell.yAcceleration = 24.0' submodules/TelegramUI/Components/ChatListHeaderComponent/Sources/ChatListNavigationBar.swift
+          grep -Fq 'self.cell.birthRate = 7.0' submodules/TelegramUI/Components/ChatListHeaderComponent/Sources/ChatListNavigationBar.swift
+          grep -Fq 'height: min(54.0, availableTitleHeight)' submodules/TelegramUI/Components/ChatListHeaderComponent/Sources/ChatListNavigationBar.swift
+          grep -Fq 'let color = isDark ? UIColor.white : UIColor.black' submodules/TelegramUI/Components/ChatListHeaderComponent/Sources/ChatListNavigationBar.swift
+          grep -Fq 'let entries: [AyuMainEntry] = [.header, .ghost, .customization, .spy]' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          ! grep -q 'themePreferredBaseTheme: \[:\]' submodules/TelegramUI/Sources/SharedAccountContext.swift
+          ! grep -q 'AYU_THEME_STATE_MIGRATION_v2' submodules/TelegramUI/Sources/SharedAccountContext.swift
+          git diff --exit-code HEAD -- submodules/TelegramUI/Sources/SharedAccountContext.swift
+          git diff --exit-code HEAD -- submodules/TelegramPresentationData/Sources/PresentationData.swift
+          grep -q 'AYU_IOS27_UNSPECIFIED_TRAIT_COMPAT_v1' submodules/Display/Source/NativeWindowHostView.swift
+          grep -q 'if style == .light || style == .dark' submodules/Display/Source/NativeWindowHostView.swift
+          grep -q 'AYU_RGB24_THEME_COLOR_COMPAT_v1' submodules/TelegramPresentationData/Sources/MakePresentationTheme.swift
+          grep -q 'ayuOpaqueThemeColor(settings.accentColor)' submodules/TelegramPresentationData/Sources/MakePresentationTheme.swift
+          ! grep -q 'updatePresentationThemeSettingsInteractively' submodules/Display/Source/NativeWindowHostView.swift
+          ! grep -q 'automaticThemeSwitchSetting' submodules/TelegramPresentationData/Sources/MakePresentationTheme.swift
+          grep -q 'AYU_SPY_SETTINGS_v0_3' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'AYU_DELETED_ARCHIVE_v0_3' submodules/TelegramCore/Sources/State/AccountStateManager.swift
+          grep -q 'AYU_VIEW_ONCE_DURABLE_v0_3' submodules/TelegramCore/Sources/TelegramEngine/Messages/MarkMessageContentAsConsumedInteractively.swift
+          grep -q 'case telegram = 8' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'case .telegram: markerColor = dateColor' submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/ChatMessageDateAndStatusNode.swift
+          grep -q 'bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: true, wallpaper: hasWallpaper).fill.first?.withAlphaComponent(1.0)' submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift
+          grep -q 'bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: false, wallpaper: hasWallpaper).fill.first?.withAlphaComponent(1.0)' submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode/Sources/ChatMessageBubbleItemNode.swift
+          grep -q 'AYU_ESSENTIALS_v1' submodules/TelegramCore/Sources/State/AyuRuntimeSettings.swift
+          grep -q 'AYU_ESSENTIALS_v1' submodules/TelegramPresentationData/Sources/NumericFormat.swift
+          grep -q 'AYU_ESSENTIALS_v1' submodules/TelegramStringFormatting/Sources/PresenceStrings.swift
+          grep -q 'withSeconds: AyuRuntimeSettings.snapshot.timeWithSeconds' submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift
+          grep -q 'displayTitleUnfiltered' submodules/LocalizedPeerData/Sources/PeerTitle.swift
+          grep -q 'ayuStripZalgoWithEntities' submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode/Sources/ChatMessageTextBubbleContentNode.swift
+          grep -q "hidePhoneNumber" submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoHeaderNode.swift
+          grep -q 'AYU_PEER_ID_INFO_v1' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift
+          grep -q 'UIPasteboard.general.string = ayuCopyText' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift
+          grep -A6 'id: 0xA0091101,' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/PeerInfoProfileItems.swift | grep -q 'label: "ID",'
+          grep -Fq 'title: "Основные", label: ""' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          grep -q 'ayuEssentialsSettingsController(context: context)' submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/AyuSettingsController.swift
+          echo '=== FULL AYU + STOCK TELEGRAM THEMES VERIFY SUCCESS ==='
+
+  build_ipa:
+    needs: verify
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 360
+    env:
+      TG_API_ID: ${{ secrets.TG_API_ID }}
+      TG_API_HASH: ${{ secrets.TG_API_HASH }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${TG_API_ID:-}" || { echo 'TG_API_ID missing'; exit 1; }
+          test -n "${TG_API_HASH:-}" || { echo 'TG_API_HASH missing'; exit 1; }
+
+      - name: Select Xcode 26.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Checkout pinned Telegram source
+        id: telegram-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF="$(tr -d '[:space:]' < telegram-ref.txt)"
+          test -n "$REF" || { echo "telegram-ref.txt is empty"; exit 1; }
+          cd "$RUNNER_TEMP"
+          rm -rf Telegram-iOS
+          git init Telegram-iOS
+          cd Telegram-iOS
+          git remote add origin https://github.com/TelegramMessenger/Telegram-iOS.git
+          git fetch --depth 1 origin "$REF"
+          git checkout --detach FETCH_HEAD
+          git submodule update --init --recursive --depth 1 --jobs 8
+          ACTUAL_REF="$(git rev-parse HEAD)"
+          test "$ACTUAL_REF" = "$REF" || { echo "Pinned Telegram ref mismatch: $ACTUAL_REF != $REF"; exit 1; }
+          echo "Telegram ref: $ACTUAL_REF"
+          echo "ref=$ACTUAL_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Bazel caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/telegram-bazel-cache
+            ~/telegram-bazel-user-root
+          key: telegram-ios-full-stock-theme-${{ steps.telegram-source.outputs.ref }}-${{ github.run_id }}
+          restore-keys: |
+            telegram-ios-full-stock-theme-${{ steps.telegram-source.outputs.ref }}-
+            telegram-ios-bazel-v030-macos26-xcode262-${{ steps.telegram-source.outputs.ref }}-
+            telegram-ios-bazel-v025-macos26-xcode262-${{ steps.telegram-source.outputs.ref }}-
+
+      - name: Apply full Ayu with stock Telegram themes
+        run: python3 "$GITHUB_WORKSPACE/apply_ayu_full_stock_pipeline.py" "$RUNNER_TEMP/Telegram-iOS"
+
+      - name: Create build configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/Telegram-iOS"
+          cat > build-system/ayu-ci-configuration.json <<EOF
+          {
+            "bundle_id": "ph.telegra.Telegraph",
+            "api_id": "${TG_API_ID}",
+            "api_hash": "${TG_API_HASH}",
+            "team_id": "C67CF9S4VU",
+            "app_center_id": "0",
+            "is_internal_build": "true",
+            "is_appstore_build": "false",
+            "appstore_id": "0",
+            "app_specific_url_scheme": "tg",
+            "premium_iap_product_id": "",
+            "enable_siri": false,
+            "enable_icloud": false
+          }
+          EOF
+          python3 -m json.tool build-system/ayu-ci-configuration.json >/dev/null
+
+      - name: Import fake signing certificates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/Telegram-iOS"
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          security find-identity -v -p codesigning || true
+
+      - name: Build release arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/Telegram-iOS"
+          mkdir -p "$RUNNER_TEMP/output" "$HOME/telegram-bazel-cache" "$HOME/telegram-bazel-user-root"
+          python3 build-system/Make/Make.py \
+            --bazelUserRoot="$HOME/telegram-bazel-user-root" \
+            --cacheDir="$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath=build-system/ayu-ci-configuration.json \
+            --codesigningInformationPath=build-system/fake-codesigning \
+            --buildNumber="$GITHUB_RUN_NUMBER" \
+            --configuration=release_arm64 \
+            --outputBuildArtifactsPath="$RUNNER_TEMP/output"
+
+      - name: Prepare IPA
+        id: ipa
+        shell: bash
+        run: |
+          set -euo pipefail
+          IPA="$RUNNER_TEMP/output/Telegram.ipa"
+          test -f "$IPA" || { find "$RUNNER_TEMP/output" -type f -print; exit 1; }
+          mv "$IPA" "$RUNNER_TEMP/output/AyuGram-Full-StockThemes.ipa"
+          echo "path=$RUNNER_TEMP/output/AyuGram-Full-StockThemes.ipa" >> "$GITHUB_OUTPUT"
+          ls -lh "$RUNNER_TEMP/output/AyuGram-Full-StockThemes.ipa"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: AyuGram-Full-StockThemes-IPA
+          path: ${{ steps.ipa.outputs.path }}
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Save Bazel caches
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/telegram-bazel-cache
+            ~/telegram-bazel-user-root
+          key: telegram-ios-full-stock-theme-${{ steps.telegram-source.outputs.ref }}-${{ github.run_id }}
