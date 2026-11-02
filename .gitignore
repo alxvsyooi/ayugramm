@@ -1,0 +1,12 @@
+# секреты и личные данные — НЕ коммитить
+config.ini
+targets.txt
+*.session
+*.session-journal
+monitor.log
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
